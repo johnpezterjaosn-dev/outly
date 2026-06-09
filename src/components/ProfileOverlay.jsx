@@ -1,0 +1,212 @@
+import { useState } from 'react'
+import { useAuth } from '../context/AuthContext'
+
+const FOODS = [
+  { e: '🍔', l: "McDonald's" }, { e: '🍗', l: 'KFC' }, { e: '🍕', l: "Domino's" },
+  { e: '🌮', l: 'Taco Bell' }, { e: '🥪', l: 'Subway' }, { e: '🍣', l: 'Japanese' },
+  { e: '🍜', l: 'Vietnamese' }, { e: '🥘', l: 'Chinese' }, { e: '🍛', l: 'Indian' },
+  { e: '🥙', l: 'Lebanese' }, { e: '🍝', l: 'Italian' }, { e: '🌯', l: 'Mexican' },
+  { e: '🥩', l: 'Steakhouse' }, { e: '🍱', l: 'Korean BBQ' }, { e: '🥗', l: 'Healthy' },
+  { e: '☕', l: 'Café' }, { e: '🍦', l: 'Dessert' }, { e: '🍺', l: 'Bar & Grill' },
+]
+const BUDGETS = [
+  { e: '🤑', range: '$5 – $10', label: 'Budget friendly', v: '5-10' },
+  { e: '😋', range: '$11 – $20', label: 'Everyday eats', v: '11-20' },
+  { e: '🍽️', range: '$20 – $50', label: 'Treat yourself', v: '20-50' },
+  { e: '✨', range: 'Any budget', label: 'Show me everything', v: 'any' },
+]
+
+function SubOverlay({ title, onBack, onSave, children }) {
+  return (
+    <div className="overlay" style={{ zIndex: 60 }}>
+      <div className="ovhead">
+        <button className="ovback" onClick={onBack}><i className="ti ti-arrow-left" style={{ fontSize: 18, color: '#fff' }} /></button>
+        <div className="ovtitle">{title}</div>
+        <span className="ovsave" onClick={onSave}>Save</span>
+      </div>
+      <div className="ovscroll">{children}</div>
+    </div>
+  )
+}
+
+export default function ProfileOverlay({ onClose }) {
+  const { profile, updateProfile, signOut } = useAuth()
+  const [sub, setSub] = useState(null)
+  const [saving, setSaving] = useState(false)
+
+  const [form, setForm] = useState({
+    first_name: profile?.first_name ?? '',
+    last_name: profile?.last_name ?? '',
+    username: profile?.username ?? '',
+    email: profile?.email ?? '',
+    phone: profile?.phone ?? '',
+  })
+  const [bud, setBud] = useState(profile?.budget ?? null)
+  const [foodPrefs, setFoodPrefs] = useState(profile?.food_preferences ?? [])
+
+  const initials = `${profile?.first_name?.[0] ?? ''}${profile?.last_name?.[0] ?? ''}`.toUpperCase() || '?'
+  const budgetInfo = BUDGETS.find(b => b.v === profile?.budget)
+
+  async function save(updates) {
+    setSaving(true)
+    try { await updateProfile(updates) } catch (e) { console.error(e) } finally { setSaving(false); setSub(null) }
+  }
+
+  function toggleFood(l) { setFoodPrefs(f => f.includes(l) ? f.filter(x => x !== l) : [...f, l]) }
+
+  if (sub === 'profile') return (
+    <SubOverlay title="Edit Profile" onBack={() => setSub(null)} onSave={() => save(form)}>
+      {[['first_name','First name'],['last_name','Last name'],['username','Username'],['email','Email'],['phone','Phone']].map(([k, label]) => (
+        <div key={k} className="fwrap" style={{ marginTop: 16 }}>
+          <div className="flabel">{label}</div>
+          <input className="finput" value={form[k]} onChange={e => setForm(f => ({ ...f, [k]: e.target.value }))} placeholder={k === 'phone' ? 'Add phone number' : ''} />
+        </div>
+      ))}
+    </SubOverlay>
+  )
+
+  if (sub === 'budget') return (
+    <SubOverlay title="Edit Budget" onBack={() => setSub(null)} onSave={() => save({ budget: bud })}>
+      <p style={{ fontSize: 14, color: '#666', margin: '16px 0', lineHeight: 1.5 }}>Your budget helps us recommend places that suit your spending style.</p>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+        {BUDGETS.map(b => (
+          <div key={b.v} onClick={() => setBud(b.v)} style={{
+            borderRadius: 16, padding: '16px 12px', cursor: 'pointer', textAlign: 'center',
+            border: `1.5px solid ${bud === b.v ? '#FF6B35' : '#2a2a2a'}`,
+            background: bud === b.v ? 'rgba(255,107,53,0.1)' : '#1a1a1a',
+          }}>
+            <div style={{ fontSize: 24, marginBottom: 6 }}>{b.e}</div>
+            <div style={{ fontSize: 14, fontWeight: 700, color: bud === b.v ? '#FF6B35' : '#fff' }}>{b.range}</div>
+            <div style={{ fontSize: 11, color: '#666', marginTop: 2 }}>{b.label}</div>
+          </div>
+        ))}
+      </div>
+    </SubOverlay>
+  )
+
+  if (sub === 'food') return (
+    <SubOverlay title="Food Preferences" onBack={() => setSub(null)} onSave={() => save({ food_preferences: foodPrefs })}>
+      <p style={{ fontSize: 14, color: '#666', margin: '16px 0', lineHeight: 1.5 }}>Tap to add or remove. We use these to personalise your feeds.</p>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+        {FOODS.map(f => (
+          <div key={f.l} className={`chip ${foodPrefs.includes(f.l) ? 'on' : ''}`} onClick={() => toggleFood(f.l)}>
+            <span style={{ fontSize: 15 }}>{f.e}</span><span>{f.l}</span>
+          </div>
+        ))}
+      </div>
+    </SubOverlay>
+  )
+
+  return (
+    <div className="overlay">
+      <div className="ovhead">
+        <button className="ovback" onClick={onClose}><i className="ti ti-arrow-left" style={{ fontSize: 18, color: '#fff' }} /></button>
+        <div className="ovtitle">Profile</div>
+        <span className="ovsave" onClick={onClose}>Done</span>
+      </div>
+      <div className="ovscroll">
+        {/* Header */}
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '24px 20px 20px' }}>
+          <div style={{ position: 'relative', marginBottom: 14, cursor: 'pointer' }}>
+            <div style={{ width: 80, height: 80, borderRadius: '50%', background: 'linear-gradient(135deg,#FF6B35,#f5a623)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 28, fontWeight: 700, color: '#fff', border: '3px solid #222' }}>{initials}</div>
+            <div style={{ position: 'absolute', bottom: 0, right: 0, width: 26, height: 26, borderRadius: '50%', background: '#FF6B35', border: '2px solid #111', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <i className="ti ti-camera" style={{ fontSize: 12, color: '#fff' }} />
+            </div>
+          </div>
+          <div style={{ fontSize: 22, fontWeight: 700, color: '#fff', letterSpacing: -0.3, marginBottom: 2 }}>{profile?.first_name} {profile?.last_name}</div>
+          <div style={{ fontSize: 14, color: '#666', marginBottom: 12 }}>@{profile?.username}</div>
+          <div style={{ display: 'flex', gap: 28, marginBottom: 16 }}>
+            {[['6','Friends'],['4','Hangouts'],['12','Places']].map(([n,l]) => (
+              <div key={l} style={{ textAlign: 'center' }}>
+                <div style={{ fontSize: 17, fontWeight: 700, color: '#fff' }}>{n}</div>
+                <div style={{ fontSize: 11, color: '#666', marginTop: 1 }}>{l}</div>
+              </div>
+            ))}
+          </div>
+          <button onClick={() => setSub('profile')} style={{ background: '#1e1e1e', border: '0.5px solid #2a2a2a', borderRadius: 10, padding: '8px 24px', fontSize: 13, fontWeight: 600, color: '#fff', cursor: 'pointer' }}>Edit Profile</button>
+        </div>
+
+        {/* Details */}
+        <Row title="My Details" />
+        <InfoCard items={[
+          { icon: 'ti-mail', label: 'Email', val: profile?.email ?? 'Not set', onClick: () => setSub('profile') },
+          { icon: 'ti-phone', label: 'Phone', val: profile?.phone ?? 'Not set', onClick: () => setSub('profile') },
+        ]} />
+
+        {/* Budget */}
+        <Row title="Budget" action="Change" onAction={() => setSub('budget')} />
+        <div style={{ margin: '0 20px', background: '#1a1a1a', border: '0.5px solid #2a2a2a', borderRadius: 14, padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 12 }}>
+          <div style={{ fontSize: 28 }}>{budgetInfo?.e ?? '💰'}</div>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: 16, fontWeight: 700, color: '#fff' }}>{budgetInfo?.range ?? 'Not set'}</div>
+            <div style={{ fontSize: 12, color: '#666', marginTop: 2 }}>{budgetInfo?.label ?? 'Tap Change to set your budget'}</div>
+          </div>
+          <span style={{ fontSize: 12, color: '#FF6B35', fontWeight: 600, cursor: 'pointer' }} onClick={() => setSub('budget')}>Edit →</span>
+        </div>
+
+        {/* Food */}
+        <Row title="Food & Vibe Preferences" action="Edit" onAction={() => setSub('food')} />
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, padding: '0 20px' }}>
+          {(profile?.food_preferences ?? []).length > 0
+            ? (profile.food_preferences).map(f => {
+                const info = FOODS.find(x => x.l === f)
+                return (
+                  <div key={f} style={{ display: 'flex', alignItems: 'center', gap: 6, background: '#1a1a1a', border: '1px solid #2a2a2a', borderRadius: 50, padding: '7px 12px' }}>
+                    <span style={{ fontSize: 15 }}>{info?.e ?? '🍽️'}</span>
+                    <span style={{ fontSize: 12, fontWeight: 500, color: '#aaa' }}>{f}</span>
+                  </div>
+                )
+              })
+            : <span style={{ fontSize: 13, color: '#555' }}>No preferences — <span style={{ color: '#FF6B35', cursor: 'pointer' }} onClick={() => setSub('food')}>add some</span></span>
+          }
+        </div>
+
+        {/* Settings */}
+        <Row title="Settings" />
+        <div style={{ margin: '0 20px', background: '#1a1a1a', border: '0.5px solid #2a2a2a', borderRadius: 14, overflow: 'hidden' }}>
+          {[['ti-bell','Notifications'],['ti-lock','Privacy'],['ti-map-pin','Location settings'],['ti-help-circle','Help & Support']].map(([icon, label], i, arr) => (
+            <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '14px 16px', borderBottom: i < arr.length-1 ? '0.5px solid #1e1e1e' : 'none', cursor: 'pointer' }}>
+              <i className={`ti ${icon}`} style={{ fontSize: 18, color: '#888', flexShrink: 0 }} />
+              <span style={{ flex: 1, fontSize: 14, fontWeight: 500, color: '#ccc' }}>{label}</span>
+              <i className="ti ti-chevron-right" style={{ fontSize: 16, color: '#333' }} />
+            </div>
+          ))}
+        </div>
+
+        <div style={{ margin: '12px 20px 0' }}>
+          <button onClick={() => signOut()} style={{ width: '100%', background: 'rgba(255,59,48,0.1)', border: '0.5px solid rgba(255,59,48,0.25)', borderRadius: 14, padding: 14, fontSize: 14, fontWeight: 600, color: '#ff3b30', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+            <i className="ti ti-logout" style={{ fontSize: 16 }} />
+            Log out
+          </button>
+        </div>
+        <div style={{ height: 24 }} />
+      </div>
+    </div>
+  )
+}
+
+function Row({ title, action, onAction }) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '18px 20px 10px' }}>
+      <div style={{ fontSize: 13, fontWeight: 700, color: '#fff' }}>{title}</div>
+      {action && <span style={{ fontSize: 12, color: '#FF6B35', fontWeight: 600, cursor: 'pointer' }} onClick={onAction}>{action}</span>}
+    </div>
+  )
+}
+
+function InfoCard({ items }) {
+  return (
+    <div style={{ margin: '0 20px', background: '#1a1a1a', border: '0.5px solid #2a2a2a', borderRadius: 14, overflow: 'hidden' }}>
+      {items.map((item, i) => (
+        <div key={item.label} onClick={item.onClick} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '14px 16px', borderBottom: i < items.length-1 ? '0.5px solid #222' : 'none', cursor: 'pointer' }}>
+          <i className={`ti ${item.icon}`} style={{ fontSize: 18, color: '#FF6B35', flexShrink: 0 }} />
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: 12, color: '#666', marginBottom: 2 }}>{item.label}</div>
+            <div style={{ fontSize: 14, fontWeight: 500, color: '#fff' }}>{item.val}</div>
+          </div>
+          <i className="ti ti-chevron-right" style={{ fontSize: 16, color: '#444' }} />
+        </div>
+      ))}
+    </div>
+  )
+}
