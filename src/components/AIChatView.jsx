@@ -52,7 +52,7 @@ export default function AIChatView({ onBack }) {
         body: JSON.stringify({
           model: 'claude-sonnet-4-20250514',
           max_tokens: 400,
-          system: `You are Outly AI — a casual, friendly hangout planner. Help the user find restaurants and activities to do with friends. Be short, chat-style, use emojis naturally. User budget: ${profile?.budget ?? 'unknown'}. Food prefs: ${profile?.food_preferences?.join(', ') ?? 'unknown'}. Location: Western Sydney area.`,
+          system: `You are Outly AI — a casual, friendly hangout planner. Help the user find restaurants and activities to do with friends. Be short, chat-style, use emojis naturally. User budget: ${profile?.budget ?? 'unknown'}. Food prefs: ${profile?.food_preferences?.join(', ') ?? 'unknown'}. Allergies/dietary needs: ${profile?.allergies?.length ? profile.allergies.join(', ') : 'none listed'} — NEVER suggest food that conflicts with these. Location: ${profile?.postcode ? `postcode ${profile.postcode}, ` : ''}Western Sydney area.`,
           messages: newMsgs.map(m => ({ role: m.role, content: m.text }))
         })
       })
