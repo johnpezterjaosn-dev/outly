@@ -13,9 +13,9 @@ const FRIENDS = [
 
 const CHATS = [
   { id: 'ai', ai: true, name: 'Outly AI', preview: 'I found 3 great spots for Saturday 👀', time: 'now', unread: 1 },
-  { id: 'group', name: 'Weekend Squad', preview: '📍 Vote open · 3 options', time: '2m', unread: 3, e: '🏀', bg: '#FF6B35', hangout: true },
-  { id: 'kyle', name: 'Kyle L', preview: 'bro you free Saturday??', time: '15m', i: 'KL', c: '#5b8dee' },
-  { id: 'sarah', name: 'Sarah M', preview: 'haha yeah lets do it', time: '1h', i: 'SM', c: '#e74c3c' },
+  { id: 'group', name: 'Weekend Squad', demo: true, preview: '📍 Vote open · 3 options', time: '2m', unread: 3, e: '🏀', bg: '#FF6B35', hangout: true },
+  { id: 'kyle', name: 'Kyle L', demo: true, preview: 'bro you free Saturday??', time: '15m', i: 'KL', c: '#5b8dee' },
+  { id: 'sarah', name: 'Sarah M', demo: true, preview: 'haha yeah lets do it', time: '1h', i: 'SM', c: '#e74c3c' },
 ]
 
 function OA({ s = 50 }) {
@@ -66,6 +66,9 @@ export default function DiscussPage() {
       </div>
 
       <div className="slabel">Messages</div>
+      <div style={{ padding: '0 20px 8px', fontSize: 11, color: '#555', lineHeight: 1.4 }}>
+        Chats marked DEMO are previews — real-time messaging with friends ships in the next version.
+      </div>
 
       {CHATS.map(chat => (
         <div key={chat.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 20px', cursor: 'pointer' }} onClick={() => setActive(chat.id)}>
@@ -77,7 +80,7 @@ export default function DiscussPage() {
           }
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 3 }}>
-              <span style={{ fontSize: 15, fontWeight: 600, color: '#fff' }}>{chat.name}</span>
+              <span style={{ fontSize: 15, fontWeight: 600, color: '#fff' }}>{chat.name}{chat.demo && <span className="demo-tag">DEMO</span>}</span>
               <span style={{ fontSize: 11, color: '#555' }}>{chat.time}</span>
             </div>
             <div style={{ fontSize: 13, color: chat.unread ? '#aaa' : '#666', fontWeight: chat.unread ? 500 : 400, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>

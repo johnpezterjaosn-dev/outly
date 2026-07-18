@@ -76,13 +76,14 @@ export default function DiscoverPage() {
       )}
 
       {CATEGORIES.map(c => {
-        const items = data[c.key] ?? FALLBACK[c.key]
+        const items = live ? data[c.key] : FALLBACK[c.key]
         return (
           <div key={c.key}>
             <div className="slabel"><i className={`ti ${c.icon}`} />{c.label}</div>
             {c.type === 'cards' ? (
               <div className="hscroll">
-                {items.map(item => (
+                {!items && [1,2,3].map(i => <div key={i} className="fcard skel" />)}
+                {(items ?? []).map(item => (
                   <div key={item.id ?? item.name} className="fcard" onClick={() => setSelected(item)}
                     style={{ background: item.bg ?? '#1a1a1a', cursor: 'pointer', overflow: 'hidden' }}>
                     {item.photo && hasPlacesKey() ? (
@@ -100,7 +101,16 @@ export default function DiscoverPage() {
               </div>
             ) : (
               <div>
-                {items.map(item => (
+                {!items && [1,2,3].map(i => (
+                  <div key={i} className="lrow">
+                    <div className="lthumb skel" />
+                    <div className="linfo">
+                      <div className="skel" style={{ height: 14, width: '60%', marginBottom: 8 }} />
+                      <div className="skel" style={{ height: 10, width: '40%' }} />
+                    </div>
+                  </div>
+                ))}
+                {(items ?? []).map(item => (
                   <div key={item.id ?? item.name} className="lrow" onClick={() => setSelected(item)} style={{ cursor: 'pointer' }}>
                     <div className="lthumb" style={{ overflow: 'hidden' }}>
                       {item.photo && hasPlacesKey()

@@ -9,6 +9,12 @@ const FOODS = [
   { e: '🥩', l: 'Steakhouse' }, { e: '🍱', l: 'Korean BBQ' }, { e: '🥗', l: 'Healthy' },
   { e: '☕', l: 'Café' }, { e: '🍦', l: 'Dessert' }, { e: '🍺', l: 'Bar & Grill' },
 ]
+const ALLERGIES = [
+  { e: '🥜', l: 'Nuts' }, { e: '🦐', l: 'Shellfish' }, { e: '🌾', l: 'Gluten' },
+  { e: '🥛', l: 'Dairy' }, { e: '🥚', l: 'Egg' }, { e: '🫘', l: 'Soy' },
+  { e: '🐟', l: 'Fish' }, { e: '🌱', l: 'Vegetarian' }, { e: '🥦', l: 'Vegan' },
+  { e: '☪️', l: 'Halal' }, { e: '✡️', l: 'Kosher' }, { e: '✅', l: 'None' },
+]
 const BUDGETS = [
   { e: '🤑', range: '$5 – $10', label: 'Budget friendly', v: '5-10' },
   { e: '😋', range: '$11 – $20', label: 'Everyday eats', v: '11-20' },
@@ -43,6 +49,7 @@ export default function ProfileOverlay({ onClose }) {
   })
   const [bud, setBud] = useState(profile?.budget ?? null)
   const [foodPrefs, setFoodPrefs] = useState(profile?.food_preferences ?? [])
+  const [alg, setAlg] = useState(profile?.allergies ?? [])
 
   const initials = `${profile?.first_name?.[0] ?? ''}${profile?.last_name?.[0] ?? ''}`.toUpperCase() || '?'
   const budgetInfo = BUDGETS.find(b => b.v === profile?.budget)
@@ -53,6 +60,10 @@ export default function ProfileOverlay({ onClose }) {
   }
 
   function toggleFood(l) { setFoodPrefs(f => f.includes(l) ? f.filter(x => x !== l) : [...f, l]) }
+  function toggleAlg(l) {
+    if (l === 'None') return setAlg(a => a.includes('None') ? [] : ['None'])
+    setAlg(a => a.includes(l) ? a.filter(x => x !== l) : [...a.filter(x => x !== 'None'), l])
+  }
 
   if (sub === 'profile') return (
     <SubOverlay title="Edit Profile" onBack={() => setSub(null)} onSave={() => save(form)}>
@@ -78,6 +89,19 @@ export default function ProfileOverlay({ onClose }) {
             <div style={{ fontSize: 24, marginBottom: 6 }}>{b.e}</div>
             <div style={{ fontSize: 14, fontWeight: 700, color: bud === b.v ? '#FF6B35' : '#fff' }}>{b.range}</div>
             <div style={{ fontSize: 11, color: '#666', marginTop: 2 }}>{b.label}</div>
+          </div>
+        ))}
+      </div>
+    </SubOverlay>
+  )
+
+  if (sub === 'allergies') return (
+    <SubOverlay title="Allergies & Dietary Needs" onBack={() => setSub(null)} onSave={() => save({ allergies: alg })}>
+      <p style={{ fontSize: 14, color: '#666', margin: '16px 0', lineHeight: 1.5 }}>We filter suggestions around these — the AI will never suggest food that conflicts with them.</p>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+        {ALLERGIES.map(a => (
+          <div key={a.l} className={`chip ${alg.includes(a.l) ? 'on' : ''}`} onClick={() => toggleAlg(a.l)}>
+            <span style={{ fontSize: 15 }}>{a.e}</span><span>{a.l}</span>
           </div>
         ))}
       </div>
@@ -158,6 +182,23 @@ export default function ProfileOverlay({ onClose }) {
                 )
               })
             : <span style={{ fontSize: 13, color: '#555' }}>No preferences — <span style={{ color: '#FF6B35', cursor: 'pointer' }} onClick={() => setSub('food')}>add some</span></span>
+          }
+        </div>
+
+        {/* Allergies */}
+        <Row title="Allergies & Dietary Needs" action="Edit" onAction={() => setSub('allergies')} />
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, padding: '0 20px' }}>
+          {(profile?.allergies ?? []).length > 0
+            ? (profile.allergies).map(a => {
+                const info = ALLERGIES.find(x => x.l === a)
+                return (
+                  <div key={a} style={{ display: 'flex', alignItems: 'center', gap: 6, background: '#1a1a1a', border: '1px solid #2a2a2a', borderRadius: 50, padding: '7px 12px' }}>
+                    <span style={{ fontSize: 15 }}>{info?.e ?? '⚠️'}</span>
+                    <span style={{ fontSize: 12, fontWeight: 500, color: '#aaa' }}>{a}</span>
+                  </div>
+                )
+              })
+            : <span style={{ fontSize: 13, color: '#555' }}>None set — <span style={{ color: '#FF6B35', cursor: 'pointer' }} onClick={() => setSub('allergies')}>add yours</span></span>
           }
         </div>
 

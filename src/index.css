@@ -244,3 +244,17 @@ button, input { font-family: var(--font); }
 .isend { width: 36px; height: 36px; border-radius: 50%; background: var(--orange); border: none; display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0; }
 .isend i { font-size: 16px; color: #fff; }
 .iai-btn { width: 36px; height: 36px; border-radius: 50%; background: #fff; border: 2px solid var(--orange); display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0; }
+
+/* Skeleton loaders */
+@keyframes skel-shimmer { 0% { background-position: -300px 0 } 100% { background-position: 300px 0 } }
+.skel {
+  background: linear-gradient(90deg, #1a1a1a 25%, #232323 50%, #1a1a1a 75%);
+  background-size: 600px 100%;
+  animation: skel-shimmer 1.3s infinite linear;
+  border-radius: 12px;
+}
+.demo-tag {
+  font-size: 9px; font-weight: 700; letter-spacing: 0.5px; color: #777;
+  border: 1px solid #333; border-radius: 4px; padding: 1px 5px; margin-left: 6px;
+  vertical-align: middle;
+}

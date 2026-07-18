@@ -36,8 +36,8 @@ export default function DinePage() {
     searchNearby({ lat, lng, types: ['restaurant', 'cafe'], radius: 2000, max: 10 }).then(r => r && setNearby(r))
   }, [live, profile?.lat, profile?.lng])
 
-  const feat = featured ?? FALLBACK_FEATURED
-  const near = nearby ?? FALLBACK_NEARBY
+  const feat = live ? featured : FALLBACK_FEATURED
+  const near = live ? nearby : FALLBACK_NEARBY
 
   return (
     <div>
@@ -49,7 +49,8 @@ export default function DinePage() {
 
       <div className="slabel"><i className="ti ti-sparkles" />Featured for you</div>
       <div className="hscroll">
-        {feat.map(p => (
+        {!feat && [1,2,3].map(i => <div key={i} className="fcard skel" />)}
+        {(feat ?? []).map(p => (
           <div key={p.id ?? p.name} className="fcard" onClick={() => setSelected(p)}
             style={{ background: p.bg ?? '#1a1a1a', cursor: 'pointer', overflow: 'hidden' }}>
             {p.photo && hasPlacesKey() ? (
@@ -67,7 +68,16 @@ export default function DinePage() {
       </div>
 
       <div className="slabel" style={{ marginTop: 8 }}><i className="ti ti-map-pin" />Nearby you</div>
-      {near.map(n => (
+      {!near && [1,2,3,4,5].map(i => (
+        <div key={i} className="lrow">
+          <div className="lthumb skel" />
+          <div className="linfo">
+            <div className="skel" style={{ height: 14, width: '60%', marginBottom: 8 }} />
+            <div className="skel" style={{ height: 10, width: '40%' }} />
+          </div>
+        </div>
+      ))}
+      {(near ?? []).map(n => (
         <div key={n.id ?? n.name} className="lrow" onClick={() => setSelected(n)} style={{ cursor: 'pointer' }}>
           <div className="lthumb" style={{ overflow: 'hidden' }}>
             {n.photo && hasPlacesKey()

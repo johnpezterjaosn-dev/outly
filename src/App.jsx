@@ -1,16 +1,39 @@
+import { useState, useEffect } from 'react'
 import { Routes, Route, Navigate } from 'react-router-dom'
 import { useAuth } from './context/AuthContext'
 import LoginPage from './pages/LoginPage'
 import OnboardingPage from './pages/OnboardingPage'
 import MainApp from './pages/MainApp'
 
-function Guard({ children }) {
-  const { user, loading } = useAuth()
-  if (loading) return (
-    <div style={{ height: '100dvh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#111' }}>
+// Splash with staged messaging — free-tier Supabase can take a while to wake
+// from auto-pause, so tell the user what's happening instead of hanging silently.
+function Splash() {
+  const [stage, setStage] = useState(0)
+  useEffect(() => {
+    const t1 = setTimeout(() => setStage(1), 6000)
+    const t2 = setTimeout(() => setStage(2), 18000)
+    return () => { clearTimeout(t1); clearTimeout(t2) }
+  }, [])
+  return (
+    <div style={{ height: '100dvh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: '#111', gap: 14, padding: 24 }}>
       <span style={{ color: '#FF6B35', fontSize: 28, fontWeight: 900, letterSpacing: -1 }}>outly</span>
+      {stage >= 1 && (
+        <div style={{ fontSize: 13, color: '#666', textAlign: 'center', lineHeight: 1.5, maxWidth: 260 }}>
+          Waking up the database… free hosting naps when nobody's around. Give it a minute ⏳
+        </div>
+      )}
+      {stage >= 2 && (
+        <button onClick={() => window.location.reload()} style={{ background: '#1e1e1e', border: '1px solid #2a2a2a', borderRadius: 12, padding: '10px 22px', fontSize: 13, fontWeight: 600, color: '#FF6B35', cursor: 'pointer' }}>
+          Taking too long — tap to retry
+        </button>
+      )}
     </div>
   )
+}
+
+function Guard({ children }) {
+  const { user, loading } = useAuth()
+  if (loading) return <Splash />
   if (!user) return <Navigate to="/login" replace />
   return children
 }

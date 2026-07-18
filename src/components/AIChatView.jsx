@@ -50,16 +50,20 @@ export default function AIChatView({ onBack }) {
           'anthropic-dangerous-direct-browser-access': 'true'
         },
         body: JSON.stringify({
-          model: 'claude-sonnet-4-20250514',
+          model: 'claude-sonnet-4-6',
           max_tokens: 400,
           system: `You are Outly AI — a casual, friendly hangout planner. Help the user find restaurants and activities to do with friends. Be short, chat-style, use emojis naturally. User budget: ${profile?.budget ?? 'unknown'}. Food prefs: ${profile?.food_preferences?.join(', ') ?? 'unknown'}. Allergies/dietary needs: ${profile?.allergies?.length ? profile.allergies.join(', ') : 'none listed'} — NEVER suggest food that conflicts with these. Location: ${profile?.postcode ? `postcode ${profile.postcode}, ` : ''}Western Sydney area.`,
           messages: newMsgs.map(m => ({ role: m.role, content: m.text }))
         })
       })
       const data = await res.json()
-      setMsgs(m => [...m, { role: 'assistant', text: data.content?.[0]?.text ?? 'Something went wrong, try again.' }])
+      const reply = data.content?.[0]?.text
+        ?? (data.error?.message ? `⚠️ ${data.error.message}` : 'Something went wrong — your message is back in the box, tap send to retry.')
+      if (!data.content?.[0]?.text) setInput(text)
+      setMsgs(m => [...m, { role: 'assistant', text: reply }])
     } catch {
-      setMsgs(m => [...m, { role: 'assistant', text: 'Something went wrong, try again.' }])
+      setInput(text)
+      setMsgs(m => [...m, { role: 'assistant', text: 'Network hiccup — your message is back in the box, tap send to retry.' }])
     } finally {
       setLoading(false)
     }
