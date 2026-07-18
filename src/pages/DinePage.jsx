@@ -41,6 +41,18 @@ export default function DinePage() {
 
   return (
     <div>
+      {live && !profile?.location_live && profile?.postcode && (
+        <div style={{ margin: '10px 16px 0', fontSize: 11, color: '#777', display: 'flex', alignItems: 'center', gap: 6 }}>
+          <i className="ti ti-mailbox" style={{ fontSize: 13 }} />
+          Showing your postcode {profile.postcode} area — allow location for results near you right now
+        </div>
+      )}
+      {live && profile?.location_live && (
+        <div style={{ margin: '10px 16px 0', fontSize: 11, color: '#3aad6e', display: 'flex', alignItems: 'center', gap: 6 }}>
+          <i className="ti ti-current-location" style={{ fontSize: 13 }} />
+          Live location — results near you now
+        </div>
+      )}
       {!live && (
         <div style={{ margin: '10px 16px 0', background: '#1a1a1a', border: '0.5px dashed #2a2a2a', borderRadius: 12, padding: '10px 12px', fontSize: 11.5, color: '#666', lineHeight: 1.4 }}>
           Showing sample data — add a Google Places key {!profile?.lat && '+ location'} for live results near you.

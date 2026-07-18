@@ -26,7 +26,31 @@ export function AuthProvider({ children }) {
 
   async function fetchProfile(userId) {
     const { data } = await supabase.from('profiles').select('*').eq('id', userId).single()
-    if (data) setProfile(data)
+    if (data) {
+      setProfile(data)
+      refreshLocation(data, userId)
+    }
+  }
+
+  // Live location: each session, quietly try to get the user's CURRENT position.
+  // Success -> use it for this session's searches and persist it to the profile,
+  // so results follow the user (Blacktown today, Parramatta tomorrow).
+  // Denied/unavailable -> stored coords (GPS from onboarding, or postcode geocode) remain the fallback.
+  function refreshLocation(prof, userId) {
+    if (!prof?.onboarding_complete || !navigator.geolocation) return
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        const lat = pos.coords.latitude, lng = pos.coords.longitude
+        // ignore tiny drift (<300m) to avoid pointless writes
+        const moved = !prof.lat || Math.abs(lat - prof.lat) > 0.003 || Math.abs(lng - prof.lng) > 0.003
+        setProfile(p => p ? { ...p, lat, lng, location_live: true } : p)
+        if (moved) {
+          await supabase.from('profiles').update({ lat, lng }).eq('id', userId)
+        }
+      },
+      () => {}, // denied or unavailable: keep stored coords, no nagging
+      { enableHighAccuracy: true, timeout: 8000, maximumAge: 120000 }
+    )
   }
 
   async function signUp({ email, password, firstName, lastName, username }) {
