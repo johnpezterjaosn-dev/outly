@@ -133,14 +133,11 @@ export default function ProfileOverlay({ onClose }) {
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '24px 20px 20px' }}>
           <div style={{ position: 'relative', marginBottom: 14, cursor: 'pointer' }}>
             <div style={{ width: 80, height: 80, borderRadius: '50%', background: 'linear-gradient(135deg,#FF6B35,#f5a623)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 28, fontWeight: 700, color: '#fff', border: '3px solid #222' }}>{initials}</div>
-            <div style={{ position: 'absolute', bottom: 0, right: 0, width: 26, height: 26, borderRadius: '50%', background: '#FF6B35', border: '2px solid #111', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <i className="ti ti-camera" style={{ fontSize: 12, color: '#fff' }} />
-            </div>
           </div>
           <div style={{ fontSize: 22, fontWeight: 700, color: '#fff', letterSpacing: -0.3, marginBottom: 2 }}>{profile?.first_name} {profile?.last_name}</div>
           <div style={{ fontSize: 14, color: '#666', marginBottom: 12 }}>@{profile?.username}</div>
           <div style={{ display: 'flex', gap: 28, marginBottom: 16 }}>
-            {[['6','Friends'],['4','Hangouts'],['12','Places']].map(([n,l]) => (
+            {[['—','Friends'],['—','Hangouts'],['—','Places']].map(([n,l]) => (
               <div key={l} style={{ textAlign: 'center' }}>
                 <div style={{ fontSize: 17, fontWeight: 700, color: '#fff' }}>{n}</div>
                 <div style={{ fontSize: 11, color: '#666', marginTop: 1 }}>{l}</div>
@@ -205,10 +202,10 @@ export default function ProfileOverlay({ onClose }) {
         {/* Settings */}
         <Row title="Settings" />
         <div style={{ margin: '0 20px', background: '#1a1a1a', border: '0.5px solid #2a2a2a', borderRadius: 14, overflow: 'hidden' }}>
-          {[['ti-bell','Notifications'],['ti-lock','Privacy'],['ti-map-pin','Location settings'],['ti-help-circle','Help & Support']].map(([icon, label], i, arr) => (
-            <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '14px 16px', borderBottom: i < arr.length-1 ? '0.5px solid #1e1e1e' : 'none', cursor: 'pointer' }}>
+          {[['ti-bell','Notifications', false],['ti-lock','Privacy', false],['ti-map-pin','Location settings', false],['ti-help-circle','Help & Support', true]].map(([icon, label, works], i, arr) => (
+            <div key={label} onClick={() => { if (works) window.location.href = 'mailto:johnpezterjaosn@gmail.com?subject=Outly%20support' }} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '14px 16px', borderBottom: i < arr.length-1 ? '0.5px solid #1e1e1e' : 'none', cursor: works ? 'pointer' : 'default', opacity: works ? 1 : 0.55 }}>
               <i className={`ti ${icon}`} style={{ fontSize: 18, color: '#888', flexShrink: 0 }} />
-              <span style={{ flex: 1, fontSize: 14, fontWeight: 500, color: '#ccc' }}>{label}</span>
+              <span style={{ flex: 1, fontSize: 14, fontWeight: 500, color: '#ccc' }}>{label}{!works && <span className="demo-tag">SOON</span>}</span>
               <i className="ti ti-chevron-right" style={{ fontSize: 16, color: '#333' }} />
             </div>
           ))}

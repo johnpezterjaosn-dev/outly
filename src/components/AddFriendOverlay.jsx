@@ -16,6 +16,7 @@ export default function AddFriendOverlay({ onClose }) {
         <div className="ovtitle">Add Friends</div>
       </div>
       <div className="ovscroll">
+        <div style={{ margin: '12px 16px 0', fontSize: 11, color: '#555', lineHeight: 1.4 }}>Friend requests are a preview — the full friends system ships in the next version.</div>
         <div style={{ position: 'relative', marginTop: 16, marginBottom: 4 }}>
           <i className="ti ti-search" style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', fontSize: 16, color: '#555' }} />
           <input className="finput" style={{ paddingLeft: 42 }} placeholder="Search by name or @username" />

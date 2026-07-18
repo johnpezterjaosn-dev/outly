@@ -1,6 +1,7 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
+import { supabase } from '../lib/supabase'
 
 export default function LoginPage() {
   const [tab, setTab] = useState('login')
@@ -10,6 +11,47 @@ export default function LoginPage() {
   const nav = useNavigate()
 
   const [lf, setLf] = useState({ email: '', password: '' })
+  const [info, setInfo] = useState('')
+  const [newPw, setNewPw] = useState('')
+
+  // If the user arrived from a password-reset email, Supabase puts type=recovery in the URL
+  useEffect(() => {
+    if (window.location.hash.includes('type=recovery')) setTab('reset')
+  }, [])
+
+  async function doGoogle() {
+    setErr(''); setInfo('')
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: { redirectTo: window.location.origin },
+      })
+      if (error) throw error
+    } catch (e) {
+      setErr(e.message?.includes('not enabled')
+        ? 'Google sign-in is being set up — use email for now.'
+        : e.message)
+    }
+  }
+
+  async function doForgot() {
+    setErr(''); setInfo('')
+    if (!lf.email) { setErr('Type your email above first, then tap Forgot password.'); return }
+    const { error } = await supabase.auth.resetPasswordForEmail(lf.email, { redirectTo: window.location.origin + '/login' })
+    if (error) setErr(error.message)
+    else setInfo('Reset link sent — check your email 📬')
+  }
+
+  async function doReset(e) {
+    e.preventDefault()
+    setLoading(true); setErr('')
+    try {
+      const { error } = await supabase.auth.updateUser({ password: newPw })
+      if (error) throw error
+      setInfo('Password updated ✅'); setTab('login'); nav('/')
+    } catch (e) { setErr(e.message) }
+    finally { setLoading(false) }
+  }
   const [sf, setSf] = useState({ firstName: '', lastName: '', username: '', email: '', password: '' })
 
   async function doLogin(e) {
@@ -55,8 +97,20 @@ export default function LoginPage() {
         </div>
 
         {err && <div className="err">{err}</div>}
+        {info && <div className="err" style={{ background: 'rgba(58,173,110,0.1)', borderColor: '#3aad6e', color: '#3aad6e' }}>{info}</div>}
 
-        {tab === 'login' ? (
+        {tab === 'reset' && (
+          <form onSubmit={doReset}>
+            <div style={{ fontSize: 14, color: '#aaa', marginBottom: 16, lineHeight: 1.5 }}>Set a new password for your account.</div>
+            <div className="fwrap">
+              <div className="flabel"><i className="ti ti-lock" />New password</div>
+              <input className="finput" type="password" placeholder="••••••••" value={newPw} onChange={e => setNewPw(e.target.value)} required minLength={6} />
+            </div>
+            <button className="btn btn-o" type="submit" disabled={loading}>{loading ? 'Saving...' : 'Save new password'}</button>
+          </form>
+        )}
+
+        {tab === 'login' && (
           <form onSubmit={doLogin}>
             <div className="fwrap">
               <div className="flabel"><i className="ti ti-mail" />Email</div>
@@ -66,10 +120,11 @@ export default function LoginPage() {
               <div className="flabel"><i className="ti ti-lock" />Password</div>
               <input className="finput" type="password" placeholder="••••••••" value={lf.password} onChange={e => setLf(f => ({ ...f, password: e.target.value }))} required />
             </div>
-            <div style={{ textAlign: 'right', fontSize: 12, color: '#FF6B35', marginBottom: 24, cursor: 'pointer' }}>Forgot password?</div>
+            <div onClick={doForgot} style={{ textAlign: 'right', fontSize: 12, color: '#FF6B35', marginBottom: 24, cursor: 'pointer' }}>Forgot password?</div>
             <button className="btn btn-o" type="submit" disabled={loading}>{loading ? 'Logging in...' : 'Log in'}</button>
           </form>
-        ) : (
+        )}
+        {tab === 'signup' && (
           <form onSubmit={doSignup}>
             <div style={{ display: 'flex', gap: 10 }}>
               <div className="fwrap" style={{ flex: 1 }}>
@@ -103,7 +158,7 @@ export default function LoginPage() {
           <div style={{ flex: 1, height: '0.5px', background: '#222' }} />
         </div>
 
-        <button style={{ width: '100%', background: '#1a1a1a', border: '0.5px solid #2a2a2a', borderRadius: 14, padding: 13, fontSize: 14, fontWeight: 600, color: '#ccc', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10 }}>
+        <button onClick={doGoogle} style={{ width: '100%', background: '#1a1a1a', border: '0.5px solid #2a2a2a', borderRadius: 14, padding: 13, fontSize: 14, fontWeight: 600, color: '#ccc', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10 }}>
           <svg width="18" height="18" viewBox="0 0 24 24">
             <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
             <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>

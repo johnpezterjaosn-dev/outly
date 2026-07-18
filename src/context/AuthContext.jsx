@@ -25,7 +25,21 @@ export function AuthProvider({ children }) {
   }, [])
 
   async function fetchProfile(userId) {
-    const { data } = await supabase.from('profiles').select('*').eq('id', userId).single()
+    let { data } = await supabase.from('profiles').select('*').eq('id', userId).single()
+    if (!data) {
+      // OAuth (Google) users have no profile row yet — create one from their account info
+      const { data: { user: u } } = await supabase.auth.getUser()
+      if (u) {
+        const meta = u.user_metadata ?? {}
+        const first = meta.given_name ?? (meta.full_name ?? meta.name ?? '').split(' ')[0] ?? ''
+        const last = meta.family_name ?? (meta.full_name ?? meta.name ?? '').split(' ').slice(1).join(' ') ?? ''
+        const uname = (u.email ?? 'user').split('@')[0]
+        const { data: created } = await supabase.from('profiles')
+          .upsert({ id: userId, email: u.email, first_name: first, last_name: last, username: uname })
+          .select().single()
+        data = created
+      }
+    }
     if (data) {
       setProfile(data)
       refreshLocation(data, userId)

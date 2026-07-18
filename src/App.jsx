@@ -31,10 +31,12 @@ function Splash() {
   )
 }
 
-function Guard({ children }) {
-  const { user, loading } = useAuth()
+function Guard({ children, allowOnboarding }) {
+  const { user, profile, loading } = useAuth()
   if (loading) return <Splash />
   if (!user) return <Navigate to="/login" replace />
+  // New (e.g. Google) users who haven't done the quiz go straight to it
+  if (!allowOnboarding && profile && !profile.onboarding_complete) return <Navigate to="/onboarding" replace />
   return children
 }
 
@@ -43,7 +45,7 @@ export default function App() {
   return (
     <Routes>
       <Route path="/login" element={user ? <Navigate to="/" replace /> : <LoginPage />} />
-      <Route path="/onboarding" element={<Guard><OnboardingPage /></Guard>} />
+      <Route path="/onboarding" element={<Guard allowOnboarding><OnboardingPage /></Guard>} />
       <Route path="/*" element={<Guard><MainApp /></Guard>} />
     </Routes>
   )

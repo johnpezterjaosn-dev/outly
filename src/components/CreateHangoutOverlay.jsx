@@ -67,7 +67,7 @@ export default function CreateHangoutOverlay({ onClose, friends = [] }) {
             ))}
           </div>
         </div>
-        <button className="btn btn-o" style={{ marginTop: 28 }} onClick={() => { alert(`Hangout "${name || 'Unnamed'}" created! 🎉`); onClose() }}>
+        <button className="btn btn-o" style={{ marginTop: 28 }} onClick={() => { alert(`Preview: "${name || 'Unnamed'}" looks great! 🎉 Saving hangouts ships in the next version.`); onClose() }}>
           Create Hangout 🎉
         </button>
       </div>

@@ -60,7 +60,7 @@ export default function DiscussPage() {
               {f.i}
               {f.online && <div style={{ width: 10, height: 10, borderRadius: '50%', background: '#1db954', border: '2px solid #111', position: 'absolute', bottom: 1, right: 1 }} />}
             </div>
-            <span style={{ fontSize: 10, color: '#666' }}>{f.n}</span>
+            <span style={{ fontSize: 10, color: '#666' }}>{f.n} <span style={{ color: '#444' }}>(demo)</span></span>
           </div>
         ))}
       </div>

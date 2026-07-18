@@ -107,7 +107,7 @@ export default function CalendarOverlay({ onClose }) {
                   </div>
                 </div>
               ))}
-              <button className="btn btn-o" onClick={() => alert('Hangout added to calendar! 🎉')}>Confirm & Add to Calendar 🎉</button>
+              <button className="btn btn-o" onClick={() => alert('Preview 🎉 — calendar saving ships in the next version.')}>Confirm & Add to Calendar 🎉</button>
             </div>
           </>
         )}
