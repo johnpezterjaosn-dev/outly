@@ -258,3 +258,11 @@ button, input { font-family: var(--font); }
   border: 1px solid #333; border-radius: 4px; padding: 1px 5px; margin-left: 6px;
   vertical-align: middle;
 }
+
+
+/* Discuss layout: content area stops scrolling as a page; chat pins header top + input bottom */
+.scroll.lock { overflow: hidden; padding-bottom: 0; display: flex; flex-direction: column; }
+.scroll.lock > * { min-height: 0; }
+.listfill { flex: 1; overflow-y: auto; padding-bottom: var(--nav); scrollbar-width: none; }
+.listfill::-webkit-scrollbar { display: none; }
+.scroll.lock .ibar { margin-bottom: var(--nav); }

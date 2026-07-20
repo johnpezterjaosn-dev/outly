@@ -37,7 +37,7 @@ export default function DiscussPage() {
   if (active === 'group') return <GroupChatView onBack={() => setActive(null)} />
 
   return (
-    <div>
+    <div className="listfill">
       {/* Create hangout */}
       <div onClick={() => setShowCreate(true)} style={{ margin: '14px 20px 6px', background: '#FF6B35', borderRadius: 16, padding: '14px 18px', display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer' }}>
         <i className="ti ti-calendar-plus" style={{ fontSize: 22, color: '#fff' }} />

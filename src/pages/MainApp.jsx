@@ -32,7 +32,7 @@ export default function MainApp() {
       </div>
 
       {/* Content */}
-      <div className="scroll">
+      <div className={tab === 'discuss' ? 'scroll lock' : 'scroll'}>
         {tab === 'dine' && <DinePage />}
         {tab === 'discover' && <DiscoverPage />}
         {tab === 'discuss' && <DiscussPage />}

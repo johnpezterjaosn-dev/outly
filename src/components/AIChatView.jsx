@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import { useAuth } from '../context/AuthContext'
+import { searchNearby, hasPlacesKey } from '../lib/places'
 import CalendarOverlay from './CalendarOverlay'
 
 function OA({ s = 28 }) {
@@ -19,7 +20,27 @@ export default function AIChatView({ onBack }) {
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
   const [showCal, setShowCal] = useState(false)
+  const [nearbyCtx, setNearbyCtx] = useState('')
   const bottomRef = useRef(null)
+
+  // Give the AI real, current venue data so its suggestions are specific, not generic
+  useEffect(() => {
+    let liveFlag = true
+    ;(async () => {
+      if (!hasPlacesKey() || !profile?.lat || !profile?.lng) return
+      const [food, fun] = await Promise.all([
+        searchNearby({ lat: profile.lat, lng: profile.lng, types: ['restaurant', 'cafe'], radius: 4000, max: 8 }),
+        searchNearby({ lat: profile.lat, lng: profile.lng, types: ['park', 'movie_theater', 'bowling_alley', 'tourist_attraction'], radius: 9000, max: 6 }),
+      ])
+      if (!liveFlag) return
+      const fmt = v => `${v.name} (${v.type || 'venue'}, ${v.rating ?? '?'} stars, ${v.dist ?? '?'} away${v.openNow === false ? ', closed right now' : ''})`
+      const parts = []
+      if (food?.length) parts.push('PLACES TO EAT NEARBY: ' + food.map(fmt).join('; '))
+      if (fun?.length) parts.push('THINGS TO DO NEARBY: ' + fun.map(fmt).join('; '))
+      setNearbyCtx(parts.join('\n'))
+    })()
+    return () => { liveFlag = false }
+  }, [profile?.lat, profile?.lng])
 
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: 'smooth' }) }, [msgs, loading])
 
@@ -52,7 +73,16 @@ export default function AIChatView({ onBack }) {
         body: JSON.stringify({
           model: 'claude-sonnet-4-6',
           max_tokens: 400,
-          system: `You are Outly AI — a casual, friendly hangout planner. Help the user find restaurants and activities to do with friends. Be short, chat-style, use emojis naturally. User budget: ${profile?.budget ?? 'unknown'}. Food prefs: ${profile?.food_preferences?.join(', ') ?? 'unknown'}. Allergies/dietary needs: ${profile?.allergies?.length ? profile.allergies.join(', ') : 'none listed'} — NEVER suggest food that conflicts with these. Location: ${profile?.postcode ? `postcode ${profile.postcode}, ` : ''}Western Sydney area.`,
+          system: `You are Outly AI, the assistant inside Outly, a hangout planning app for young people in Sydney.
+STYLE RULES (strict):
+- PLAIN TEXT ONLY. Never use markdown: no asterisks, no bold, no headings, no bullet symbols. The chat shows raw text, so any * characters look broken.
+- Keep replies under 110 words. Short lines. Casual and friendly, a couple of emojis max.
+- Always end with one short question that moves the plan forward.
+USER PROFILE:
+- Budget: ${profile?.budget ?? 'unknown'} per person. Food tastes: ${profile?.food_preferences?.join(', ') ?? 'unknown'}.
+- Allergies and dietary needs: ${profile?.allergies?.length ? profile.allergies.join(', ') : 'none listed'}. NEVER suggest food or venues that conflict with these.
+- Location: ${profile?.lat ? `live location known (around ${profile.lat.toFixed(3)}, ${profile.lng.toFixed(3)}, Western Sydney)` : profile?.postcode ? `postcode ${profile.postcode} area, Western Sydney` : 'Western Sydney'}.
+${nearbyCtx ? `REAL VENUES NEAR THE USER RIGHT NOW (live from Google, with distance from them):\n${nearbyCtx}\nWhen suggesting where to eat or what to do, recommend 2 or 3 specific venues FROM THIS LIST, mention their distance, and say in a few words why each fits their tastes, budget and allergies. Do not invent venues that are not in the list.` : 'You have no live venue data right now, so suggest cuisine types or activity ideas and tell them the Dine and Discover tabs have live options near them.'}`,
           messages: newMsgs.map(m => ({ role: m.role, content: m.text }))
         })
       })
