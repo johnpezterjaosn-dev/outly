@@ -1,21 +1,19 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { supabase } from '../lib/supabase'
+import { useAuth } from '../context/AuthContext'
+import { getSettings } from '../lib/settings'
 import AIChatView from '../components/AIChatView'
 import GroupChatView from '../components/GroupChatView'
 import CreateHangoutOverlay from '../components/CreateHangoutOverlay'
 import AddFriendOverlay from '../components/AddFriendOverlay'
 
+// Sample contacts. Outly has no public user base yet, so these stand in for the
+// friends a user would invite. They are stored on the hangout as invited names.
 const FRIENDS = [
   { i: 'KL', c: '#5b8dee', n: 'Kyle', online: true },
   { i: 'SM', c: '#e74c3c', n: 'Sarah', online: true },
   { i: 'MR', c: '#3aad6e', n: 'Marcus', online: false },
   { i: 'ZA', c: '#c9a227', n: 'Zara', online: true },
-]
-
-const CHATS = [
-  { id: 'ai', ai: true, name: 'Outly AI', preview: 'I found 3 great spots for Saturday 👀', time: 'now', unread: 1 },
-  { id: 'group', name: 'Weekend Squad', demo: true, preview: '📍 Vote open · 3 options', time: '2m', unread: 3, e: '🏀', bg: '#FF6B35', hangout: true },
-  { id: 'kyle', name: 'Kyle L', demo: true, preview: 'bro you free Saturday??', time: '15m', i: 'KL', c: '#5b8dee' },
-  { id: 'sarah', name: 'Sarah M', demo: true, preview: 'haha yeah lets do it', time: '1h', i: 'SM', c: '#e74c3c' },
 ]
 
 function OA({ s = 50 }) {
@@ -28,13 +26,40 @@ function OA({ s = 50 }) {
 
 export { OA }
 
+function ago(iso) {
+  if (!iso) return ''
+  const mins = Math.floor((Date.now() - new Date(iso).getTime()) / 60000)
+  if (mins < 1) return 'now'
+  if (mins < 60) return mins + 'm'
+  const hrs = Math.floor(mins / 60)
+  if (hrs < 24) return hrs + 'h'
+  return Math.floor(hrs / 24) + 'd'
+}
+
 export default function DiscussPage() {
-  const [active, setActive] = useState(null)
+  const { user } = useAuth()
+  const [active, setActive] = useState(null)     // 'ai' or a hangout object
   const [showCreate, setShowCreate] = useState(false)
   const [showAdd, setShowAdd] = useState(false)
+  const [hangouts, setHangouts] = useState([])
+  const [loading, setLoading] = useState(true)
+  const settings = getSettings(user?.id)
+
+  async function loadHangouts() {
+    const { data } = await supabase
+      .from('hangouts')
+      .select('*')
+      .order('created_at', { ascending: false })
+    setHangouts(data ?? [])
+    setLoading(false)
+  }
+
+  useEffect(() => { loadHangouts() }, [])
 
   if (active === 'ai') return <AIChatView onBack={() => setActive(null)} />
-  if (active === 'group') return <GroupChatView onBack={() => setActive(null)} />
+  if (active && typeof active === 'object') {
+    return <GroupChatView hangout={active} onBack={() => { setActive(null); loadHangouts() }} />
+  }
 
   return (
     <div className="listfill">
@@ -48,55 +73,73 @@ export default function DiscussPage() {
         <i className="ti ti-chevron-right" style={{ fontSize: 16, color: 'rgba(255,255,255,0.5)' }} />
       </div>
 
-      {/* Friends row */}
+      {/* Contacts */}
       <div style={{ display: 'flex', gap: 14, padding: '10px 20px 4px', overflowX: 'auto', scrollbarWidth: 'none' }}>
         <div onClick={() => setShowAdd(true)} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5, cursor: 'pointer' }}>
           <div style={{ width: 48, height: 48, borderRadius: '50%', background: '#1e1e1e', border: '1.5px dashed #444', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, color: '#555' }}>+</div>
           <span style={{ fontSize: 10, color: '#666' }}>Add</span>
         </div>
         {FRIENDS.map(f => (
-          <div key={f.n} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5, cursor: 'pointer' }}>
+          <div key={f.n} onClick={() => setShowCreate(true)} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5, cursor: 'pointer' }}>
             <div style={{ width: 48, height: 48, borderRadius: '50%', background: f.c, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, fontWeight: 700, color: '#fff', position: 'relative' }}>
               {f.i}
               {f.online && <div style={{ width: 10, height: 10, borderRadius: '50%', background: '#1db954', border: '2px solid #111', position: 'absolute', bottom: 1, right: 1 }} />}
             </div>
-            <span style={{ fontSize: 10, color: '#666' }}>{f.n} <span style={{ color: '#444' }}>(demo)</span></span>
+            <span style={{ fontSize: 10, color: '#666' }}>{f.n}</span>
           </div>
         ))}
       </div>
 
       <div className="slabel">Messages</div>
-      <div style={{ padding: '0 20px 8px', fontSize: 11, color: '#555', lineHeight: 1.4 }}>
-        Chats marked DEMO are previews — real-time messaging with friends ships in the next version.
+
+      {/* Outly AI thread */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 20px', cursor: 'pointer' }} onClick={() => setActive('ai')}>
+        <OA s={50} />
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 3 }}>
+            <span style={{ fontSize: 15, fontWeight: 600, color: '#fff' }}>Outly AI</span>
+            <span style={{ fontSize: 11, color: '#555' }}>now</span>
+          </div>
+          <div style={{ fontSize: 13, color: '#aaa', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+            Ask for places near you, it knows your allergies
+          </div>
+        </div>
       </div>
 
-      {CHATS.map(chat => (
-        <div key={chat.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 20px', cursor: 'pointer' }} onClick={() => setActive(chat.id)}>
-          {chat.ai
-            ? <OA s={50} />
-            : chat.e
-              ? <div style={{ width: 50, height: 50, borderRadius: '50%', background: chat.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, flexShrink: 0 }}>{chat.e}</div>
-              : <div style={{ width: 50, height: 50, borderRadius: '50%', background: chat.c, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, fontWeight: 700, color: '#fff', flexShrink: 0 }}>{chat.i}</div>
-          }
+      {/* Real hangout chats */}
+      {loading && <div style={{ padding: '10px 20px', fontSize: 12.5, color: '#555' }}>Loading your hangouts...</div>}
+
+      {!loading && hangouts.length === 0 && (
+        <div style={{ padding: '6px 20px 20px', fontSize: 12.5, color: '#555', lineHeight: 1.6 }}>
+          No hangouts yet. Create one above, invite a few people, and it becomes a group chat you can plan in.
+        </div>
+      )}
+
+      {hangouts.map(h => (
+        <div key={h.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 20px', cursor: 'pointer' }} onClick={() => setActive(h)}>
+          <div style={{ width: 50, height: 50, borderRadius: '50%', background: '#FF6B35', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, flexShrink: 0 }}>
+            {h.type === 'Cinema' ? '🎬' : h.type === 'Outdoors' ? '🌿' : h.type === 'Activity' ? '🎮' : '🍔'}
+          </div>
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 3 }}>
-              <span style={{ fontSize: 15, fontWeight: 600, color: '#fff' }}>{chat.name}{chat.demo && <span className="demo-tag">DEMO</span>}</span>
-              <span style={{ fontSize: 11, color: '#555' }}>{chat.time}</span>
+              <span style={{ fontSize: 15, fontWeight: 600, color: '#fff', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{h.name}</span>
+              <span style={{ fontSize: 11, color: '#555', flexShrink: 0, marginLeft: 8 }}>{ago(h.created_at)}</span>
             </div>
-            <div style={{ fontSize: 13, color: chat.unread ? '#aaa' : '#666', fontWeight: chat.unread ? 500 : 400, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-              {chat.hangout
-                ? <span style={{ background: 'rgba(255,107,53,0.15)', borderRadius: 20, padding: '2px 8px', fontSize: 11, color: '#FF6B35', fontWeight: 600 }}>{chat.preview}</span>
-                : chat.preview
-              }
+            <div style={{ fontSize: 13, color: '#777', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              {h.place ? h.place : 'Tap to plan'}
+              {h.invited_names?.length ? ' · ' + h.invited_names.join(', ') : ''}
             </div>
           </div>
-          {chat.unread > 0 && (
-            <div style={{ minWidth: 18, height: 18, borderRadius: 9, background: '#FF6B35', color: '#fff', fontSize: 11, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 5px' }}>{chat.unread}</div>
-          )}
         </div>
       ))}
 
-      {showCreate && <CreateHangoutOverlay onClose={() => setShowCreate(false)} friends={FRIENDS} />}
+      {showCreate && (
+        <CreateHangoutOverlay
+          onClose={() => setShowCreate(false)}
+          friends={FRIENDS}
+          onCreated={h => { setHangouts(list => [h, ...list]); setActive(h) }}
+        />
+      )}
       {showAdd && <AddFriendOverlay onClose={() => setShowAdd(false)} />}
     </div>
   )

@@ -1,9 +1,11 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useAuth } from '../context/AuthContext'
 import DinePage from './DinePage'
 import DiscoverPage from './DiscoverPage'
 import DiscussPage from './DiscussPage'
 import ProfileOverlay from '../components/ProfileOverlay'
+import LocationPicker from '../components/LocationPicker'
+import { getSettings } from '../lib/settings'
 
 export default function MainApp() {
   const { profile } = useAuth()
@@ -12,6 +14,17 @@ export default function MainApp() {
   const second = first === 'dine' ? 'discover' : 'dine'
   const [tab, setTab] = useState(first)
   const [showProfile, setShowProfile] = useState(false)
+  const [showArea, setShowArea] = useState(false)
+  const [settings, setSettings] = useState(() => getSettings(profile?.id))
+  useEffect(() => {
+    const h = e => setSettings(e.detail)
+    window.addEventListener('outly-settings', h)
+    return () => window.removeEventListener('outly-settings', h)
+  }, [])
+
+  const areaText = settings.useLiveLocation
+    ? 'Near me'
+    : (settings.areaLabel || profile?.postcode || 'Set area')
 
   const initials = profile
     ? `${profile.first_name?.[0] ?? ''}${profile.last_name?.[0] ?? ''}`.toUpperCase() || '?'
@@ -28,6 +41,12 @@ export default function MainApp() {
           <button className={`tab ${tab === second ? 'on' : ''}`} onClick={() => setTab(second)}>{label(second)}</button>
           {tab === 'discuss' && <button className="tab on">Discuss</button>}
         </div>
+        {tab !== 'discuss' && (
+          <button className="areapill" onClick={() => setShowArea(true)} title="Change area">
+            <i className="ti ti-map-pin" style={{ fontSize: 13 }} />
+            <span>{areaText}</span>
+          </button>
+        )}
         <button className="avatar-btn" onClick={() => setShowProfile(true)}>{initials}</button>
       </div>
 
@@ -51,6 +70,7 @@ export default function MainApp() {
       </nav>
 
       {showProfile && <ProfileOverlay onClose={() => setShowProfile(false)} />}
+      {showArea && <LocationPicker onClose={() => setShowArea(false)} />}
     </div>
   )
 }

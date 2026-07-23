@@ -1,87 +1,151 @@
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
+import { supabase } from '../lib/supabase'
+import { useAuth } from '../context/AuthContext'
 import CalendarOverlay from './CalendarOverlay'
 
-function OA({ s = 28 }) {
-  return <div className="oa-wrap" style={{ width: s, height: s, flexShrink: 0 }}><span className="oa-text" style={{ fontSize: s * 0.32 }}>OA</span></div>
+const PAL = ['#5b8dee', '#e74c3c', '#3aad6e', '#c9a227', '#9b59b6']
+
+function initials(name = '') {
+  const p = name.trim().split(/\s+/)
+  return ((p[0]?.[0] ?? '?') + (p[1]?.[0] ?? '')).toUpperCase()
 }
 
-const OPTS = [
-  { name: 'Pho House + Timezone', sub: 'Vietnamese · Arcade · ~$18pp' },
-  { name: "Gigi's + Event Cinemas", sub: 'Pizza · Movie · ~$22pp' },
-  { name: 'Bento Bros + Archie Brothers', sub: 'Japanese · Retro arcade · ~$20pp' },
-]
-
-export default function GroupChatView({ onBack }) {
-  const [votes, setVotes] = useState([2, 1, 1])
-  const [voted, setVoted] = useState(null)
+export default function GroupChatView({ hangout, onBack }) {
+  const { user, profile } = useAuth()
+  const [msgs, setMsgs] = useState([])
+  const [input, setInput] = useState('')
+  const [loading, setLoading] = useState(true)
+  const [sending, setSending] = useState(false)
+  const [err, setErr] = useState('')
   const [showCal, setShowCal] = useState(false)
+  const bottomRef = useRef(null)
 
-  function castVote(i) {
-    if (voted !== null) return
-    setVoted(i)
-    setVotes(v => v.map((x, idx) => idx === i ? x + 1 : x))
+  const myName = profile?.first_name || profile?.username || 'You'
+
+  // Load existing messages, then subscribe for live updates
+  useEffect(() => {
+    let alive = true
+    async function load() {
+      const { data, error } = await supabase
+        .from('messages')
+        .select('*')
+        .eq('hangout_id', hangout.id)
+        .order('created_at', { ascending: true })
+      if (!alive) return
+      if (error) setErr(error.message)
+      else setMsgs(data ?? [])
+      setLoading(false)
+    }
+    load()
+
+    const channel = supabase
+      .channel('messages-' + hangout.id)
+      .on('postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'messages', filter: `hangout_id=eq.${hangout.id}` },
+        payload => {
+          setMsgs(m => m.some(x => x.id === payload.new.id) ? m : [...m, payload.new])
+        })
+      .subscribe()
+
+    return () => { alive = false; supabase.removeChannel(channel) }
+  }, [hangout.id])
+
+  useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: 'smooth' }) }, [msgs, loading])
+
+  async function send() {
+    const text = input.trim()
+    if (!text || sending) return
+    setInput('')
+    setSending(true)
+    setErr('')
+    const { data, error } = await supabase.from('messages').insert({
+      hangout_id: hangout.id,
+      user_id: user.id,
+      sender_name: myName,
+      content: text,
+    }).select().single()
+    if (error) {
+      setErr(error.message)
+      setInput(text)
+    } else if (data) {
+      setMsgs(m => m.some(x => x.id === data.id) ? m : [...m, data])
+    }
+    setSending(false)
   }
 
-  const total = votes.reduce((a, b) => a + b, 0)
+  const invited = hangout.invited_names ?? []
+  const when = hangout.datetime ? new Date(hangout.datetime) : null
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px', background: '#111', borderBottom: '0.5px solid #2a2a2a', flexShrink: 0 }}>
         <button className="ovback" onClick={onBack}><i className="ti ti-arrow-left" style={{ fontSize: 18, color: '#fff' }} /></button>
-        <div style={{ width: 38, height: 38, borderRadius: '50%', background: '#FF6B35', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, flexShrink: 0 }}>🏀</div>
-        <div style={{ flex: 1, marginLeft: 6 }}>
-          <div style={{ fontSize: 16, fontWeight: 700, color: '#fff' }}>Weekend Squad</div>
-          <div style={{ fontSize: 12, color: '#666' }}>Kyle, Sarah, Marcus, Zara + you</div>
+        <div style={{ width: 38, height: 38, borderRadius: '50%', background: '#FF6B35', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, flexShrink: 0 }}>
+          {hangout.type === 'Cinema' ? '🎬' : hangout.type === 'Outdoors' ? '🌿' : hangout.type === 'Activity' ? '🎮' : '🍔'}
+        </div>
+        <div style={{ flex: 1, marginLeft: 6, minWidth: 0 }}>
+          <div style={{ fontSize: 16, fontWeight: 700, color: '#fff', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{hangout.name}</div>
+          <div style={{ fontSize: 12, color: '#666', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+            {invited.length ? invited.join(', ') + ' and you' : 'Just you so far'}
+          </div>
         </div>
         <button className="ovback" onClick={() => setShowCal(true)}><i className="ti ti-calendar" style={{ fontSize: 18, color: '#FF6B35' }} /></button>
       </div>
 
       <div className="msgs">
-        <div style={{ textAlign: 'center', fontSize: 11, color: '#555' }}>Today</div>
-        <div className="mrow"><div style={{ width: 28, height: 28, borderRadius: '50%', background: '#5b8dee', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 700, color: '#fff', flexShrink: 0 }}>KL</div><div className="bub them">guys what are we doing Saturday?</div></div>
-        <div className="mrow"><div style={{ width: 28, height: 28, borderRadius: '50%', background: '#e74c3c', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 700, color: '#fff', flexShrink: 0 }}>SM</div><div className="bub them">food + something after pls 🙏</div></div>
-
-        <div className="mrow">
-          <OA s={28} />
-          <div>
-            <div className="ailabel">OUTLY AI</div>
-            <div className="bub ai" style={{ marginBottom: 8 }}>I've put together a vote based on everyone's budgets and prefs 👇</div>
-            {/* Vote card */}
-            <div style={{ background: '#161616', border: '1px solid rgba(255,107,53,0.2)', borderRadius: 16, padding: 14, maxWidth: 260 }}>
-              <div style={{ fontSize: 13, fontWeight: 700, color: '#fff', marginBottom: 10 }}>🗳 Where should we go Saturday?</div>
-              {OPTS.map((opt, i) => {
-                const pct = Math.round((votes[i] / total) * 100)
-                return (
-                  <div key={i} onClick={() => castVote(i)} style={{
-                    background: '#0d0d0d', borderRadius: 10, padding: '10px 12px', marginBottom: 6,
-                    cursor: voted === null ? 'pointer' : 'default', position: 'relative', overflow: 'hidden',
-                    border: `1px solid ${voted === i ? '#FF6B35' : '#2a2a2a'}`
-                  }}>
-                    <div style={{ position: 'absolute', top: 0, left: 0, bottom: 0, width: `${pct}%`, background: 'rgba(255,107,53,0.12)', transition: 'width 0.4s' }} />
-                    <div style={{ position: 'relative', zIndex: 1, fontSize: 13, fontWeight: 500, color: '#fff' }}>{opt.name}</div>
-                    <div style={{ position: 'relative', zIndex: 1, fontSize: 11, color: '#666', marginTop: 2 }}>{opt.sub}</div>
-                    <div style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', fontSize: 12, fontWeight: 700, color: '#FF6B35', zIndex: 1 }}>{pct}%</div>
-                  </div>
-                )
-              })}
-              <div style={{ fontSize: 11, color: '#555', textAlign: 'right', marginTop: 8 }}>
-                {total} votes · {voted !== null ? 'You voted!' : '1 left'}
-              </div>
+        {/* Hangout summary card */}
+        <div style={{ background: '#161616', border: '1px solid rgba(255,107,53,0.25)', borderRadius: 14, padding: 14, margin: '4px auto 10px', maxWidth: 300 }}>
+          <div style={{ fontSize: 13, fontWeight: 700, color: '#fff', marginBottom: 6 }}>{hangout.name}</div>
+          {hangout.place && <div style={{ fontSize: 12, color: '#aaa', marginBottom: 3 }}><i className="ti ti-map-pin" style={{ fontSize: 12, color: '#FF6B35' }} /> {hangout.place}</div>}
+          {when && <div style={{ fontSize: 12, color: '#aaa' }}><i className="ti ti-clock" style={{ fontSize: 12, color: '#FF6B35' }} /> {when.toLocaleString('en-AU', { weekday: 'short', day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' })}</div>}
+          {invited.length > 0 && (
+            <div style={{ display: 'flex', gap: 6, marginTop: 10, flexWrap: 'wrap' }}>
+              {invited.map((n, i) => (
+                <div key={n} style={{ display: 'flex', alignItems: 'center', gap: 5, background: '#0d0d0d', border: '1px solid #2a2a2a', borderRadius: 50, padding: '4px 9px' }}>
+                  <div style={{ width: 18, height: 18, borderRadius: '50%', background: PAL[i % PAL.length], fontSize: 8, fontWeight: 700, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{initials(n)}</div>
+                  <span style={{ fontSize: 11, color: '#999' }}>{n}</span>
+                </div>
+              ))}
             </div>
-          </div>
+          )}
         </div>
 
-        <div className="mrow me"><div className="bub me">AI put together good options ngl 🔥</div></div>
-        <div className="mrow"><div style={{ width: 28, height: 28, borderRadius: '50%', background: '#3aad6e', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 700, color: '#fff', flexShrink: 0 }}>MR</div><div className="bub them">voted! pho house go hard</div></div>
+        {loading && <div style={{ textAlign: 'center', fontSize: 12, color: '#555' }}>Loading messages...</div>}
+        {!loading && msgs.length === 0 && (
+          <div style={{ textAlign: 'center', fontSize: 12.5, color: '#555', lineHeight: 1.6, padding: '10px 24px' }}>
+            No messages yet. Say something to get the plan moving. Messages are saved and appear live for everyone in this hangout.
+          </div>
+        )}
+
+        {msgs.map(m => {
+          const mine = m.user_id === user.id
+          return (
+            <div key={m.id} className={mine ? 'mrow me' : 'mrow'}>
+              {!mine && (
+                <div style={{ width: 28, height: 28, borderRadius: '50%', background: PAL[(m.sender_name?.length ?? 0) % PAL.length], display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 700, color: '#fff', flexShrink: 0 }}>
+                  {initials(m.sender_name || '?')}
+                </div>
+              )}
+              <div className={mine ? 'bub me' : 'bub them'}>{m.content}</div>
+            </div>
+          )
+        })}
+        {err && <div style={{ textAlign: 'center', fontSize: 12, color: '#e07050', padding: '6px 20px' }}>{err}</div>}
+        <div ref={bottomRef} />
       </div>
 
       <div className="ibar">
-        <div className="iai-btn" onClick={() => setShowCal(true)}><span className="oa-text" style={{ fontSize: 9, color: '#FF6B35', fontWeight: 900 }}>OA</span></div>
-        <input className="iinput" placeholder="Message Weekend Squad..." />
-        <button className="isend"><i className="ti ti-send" /></button>
+        <input
+          className="iinput"
+          placeholder={`Message ${hangout.name}...`}
+          value={input}
+          onChange={e => setInput(e.target.value)}
+          onKeyDown={e => e.key === 'Enter' && send()}
+        />
+        <button className="isend" onClick={send} disabled={sending}><i className="ti ti-send" /></button>
       </div>
 
-      {showCal && <CalendarOverlay onClose={() => setShowCal(false)} />}
+      {showCal && <CalendarOverlay hangout={hangout} onClose={() => setShowCal(false)} />}
     </div>
   )
 }

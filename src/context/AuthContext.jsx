@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
+import { getSettings } from '../lib/settings'
 
 const AuthContext = createContext({})
 
@@ -52,6 +53,8 @@ export function AuthProvider({ children }) {
   // Denied/unavailable -> stored coords (GPS from onboarding, or postcode geocode) remain the fallback.
   function refreshLocation(prof, userId) {
     if (!prof?.onboarding_complete || !navigator.geolocation) return
+    // If the user has set a fixed area in settings, respect it instead of tracking them
+    if (!getSettings(userId).useLiveLocation) return
     navigator.geolocation.getCurrentPosition(
       async (pos) => {
         const lat = pos.coords.latitude, lng = pos.coords.longitude
@@ -65,6 +68,15 @@ export function AuthProvider({ children }) {
       () => {}, // denied or unavailable: keep stored coords, no nagging
       { enableHighAccuracy: true, timeout: 8000, maximumAge: 120000 }
     )
+  }
+
+  // Set the search area explicitly (from the area picker or the settings panel)
+  async function setLocation({ lat, lng, postcode }) {
+    if (!user) return
+    const patch = { lat, lng }
+    if (postcode) patch.postcode = postcode
+    setProfile(p => p ? { ...p, ...patch, location_live: getSettings(user.id).useLiveLocation } : p)
+    await supabase.from('profiles').update(patch).eq('id', user.id)
   }
 
   async function signUp({ email, password, firstName, lastName, username }) {
@@ -117,7 +129,7 @@ export function AuthProvider({ children }) {
   }
 
   return (
-    <AuthContext.Provider value={{ user, profile, loading, signUp, signIn, signOut, updateProfile }}>
+    <AuthContext.Provider value={{ user, profile, loading, signUp, signIn, signOut, updateProfile, setLocation }}>
       {children}
     </AuthContext.Provider>
   )

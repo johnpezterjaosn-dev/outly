@@ -1,11 +1,16 @@
 import { useState } from 'react'
+import { supabase } from '../lib/supabase'
+import { useAuth } from '../context/AuthContext'
 
 const TYPES = [
   { e: '🍔', l: 'Dine out' }, { e: '🎮', l: 'Activity' },
   { e: '🌿', l: 'Outdoors' }, { e: '🎬', l: 'Cinema' },
 ]
 
-export default function CreateHangoutOverlay({ onClose, friends = [] }) {
+export default function CreateHangoutOverlay({ onClose, onCreated, friends = [] }) {
+  const { user } = useAuth()
+  const [busy, setBusy] = useState(false)
+  const [err, setErr] = useState('')
   const [name, setName] = useState('')
   const [type, setType] = useState(null)
   const [dt, setDt] = useState('')
@@ -14,6 +19,24 @@ export default function CreateHangoutOverlay({ onClose, friends = [] }) {
 
   function toggle(i) {
     setInvited(f => f.includes(i) ? f.filter(x => x !== i) : [...f, i])
+  }
+
+  async function create() {
+    if (busy || !name.trim()) return
+    setBusy(true); setErr('')
+    const names = friends.filter(f => invited.includes(f.i)).map(f => f.n)
+    const { data, error } = await supabase.from('hangouts').insert({
+      name: name.trim(),
+      type,
+      place: loc.trim() || null,
+      datetime: dt ? new Date(dt).toISOString() : null,
+      created_by: user.id,
+      invited_names: names,
+    }).select().single()
+    setBusy(false)
+    if (error) { setErr(error.message); return }
+    onCreated?.(data)
+    onClose()
   }
 
   return (
@@ -67,8 +90,9 @@ export default function CreateHangoutOverlay({ onClose, friends = [] }) {
             ))}
           </div>
         </div>
-        <button className="btn btn-o" style={{ marginTop: 28 }} onClick={() => { alert(`Preview: "${name || 'Unnamed'}" looks great! 🎉 Saving hangouts ships in the next version.`); onClose() }}>
-          Create Hangout 🎉
+        {err && <div className="err" style={{ marginTop: 16 }}>{err}</div>}
+        <button className="btn btn-o" style={{ marginTop: 28 }} disabled={busy || !name.trim()} onClick={create}>
+          {busy ? 'Creating...' : 'Create Hangout 🎉'}
         </button>
       </div>
     </div>

@@ -1,5 +1,15 @@
 import { useState } from 'react'
 import { useAuth } from '../context/AuthContext'
+import { getSettings, saveSettings } from '../lib/settings'
+import LocationPicker from './LocationPicker'
+
+function Toggle({ on, onChange }) {
+  return (
+    <div className={on ? 'toggle on' : 'toggle'} onClick={e => { e.stopPropagation(); onChange(!on) }}>
+      <div className="knob" />
+    </div>
+  )
+}
 
 const FOODS = [
   { e: '🍔', l: "McDonald's" }, { e: '🍗', l: 'KFC' }, { e: '🍕', l: "Domino's" },
@@ -38,6 +48,10 @@ function SubOverlay({ title, onBack, onSave, children }) {
 export default function ProfileOverlay({ onClose }) {
   const { profile, updateProfile, signOut } = useAuth()
   const [sub, setSub] = useState(null)
+  const [openPanel, setOpenPanel] = useState(null)
+  const [showArea, setShowArea] = useState(false)
+  const [settings, setSettings] = useState(() => getSettings(profile?.id))
+  function setOpt(patch) { setSettings(saveSettings(profile?.id, patch)) }
   const [saving, setSaving] = useState(false)
 
   const [form, setForm] = useState({
@@ -202,14 +216,78 @@ export default function ProfileOverlay({ onClose }) {
         {/* Settings */}
         <Row title="Settings" />
         <div style={{ margin: '0 20px', background: '#1a1a1a', border: '0.5px solid #2a2a2a', borderRadius: 14, overflow: 'hidden' }}>
-          {[['ti-bell','Notifications', false],['ti-lock','Privacy', false],['ti-map-pin','Location settings', false],['ti-help-circle','Help & Support', true]].map(([icon, label, works], i, arr) => (
-            <div key={label} onClick={() => { if (works) window.location.href = 'mailto:johnpezterjaosn@gmail.com?subject=Outly%20support' }} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '14px 16px', borderBottom: i < arr.length-1 ? '0.5px solid #1e1e1e' : 'none', cursor: works ? 'pointer' : 'default', opacity: works ? 1 : 0.55 }}>
-              <i className={`ti ${icon}`} style={{ fontSize: 18, color: '#888', flexShrink: 0 }} />
-              <span style={{ flex: 1, fontSize: 14, fontWeight: 500, color: '#ccc' }}>{label}{!works && <span className="demo-tag">SOON</span>}</span>
-              <i className="ti ti-chevron-right" style={{ fontSize: 16, color: '#333' }} />
+
+          {/* Notifications */}
+          <div className="setrow" onClick={() => setOpenPanel(openPanel === 'notif' ? null : 'notif')} style={{ borderBottom: '0.5px solid #1e1e1e' }}>
+            <i className="ti ti-bell" style={{ fontSize: 18, color: '#888', flexShrink: 0 }} />
+            <span style={{ flex: 1, fontSize: 14, fontWeight: 500, color: '#ccc' }}>Notifications</span>
+            <i className={openPanel === 'notif' ? 'ti ti-chevron-up' : 'ti ti-chevron-down'} style={{ fontSize: 16, color: '#555' }} />
+          </div>
+          {openPanel === 'notif' && (
+            <div className="setpanel">
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 0' }}>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: 13.5, color: '#ddd' }}>Unread badges</div>
+                  <div style={{ fontSize: 11.5, color: '#666', marginTop: 2 }}>Show a count on chats with new messages</div>
+                </div>
+                <Toggle on={settings.showBadges} onChange={v => setOpt({ showBadges: v })} />
+              </div>
             </div>
-          ))}
+          )}
+
+          {/* Privacy */}
+          <div className="setrow" onClick={() => setOpenPanel(openPanel === 'privacy' ? null : 'privacy')} style={{ borderBottom: '0.5px solid #1e1e1e' }}>
+            <i className="ti ti-lock" style={{ fontSize: 18, color: '#888', flexShrink: 0 }} />
+            <span style={{ flex: 1, fontSize: 14, fontWeight: 500, color: '#ccc' }}>Privacy</span>
+            <i className={openPanel === 'privacy' ? 'ti ti-chevron-up' : 'ti ti-chevron-down'} style={{ fontSize: 16, color: '#555' }} />
+          </div>
+          {openPanel === 'privacy' && (
+            <div className="setpanel">
+              <div style={{ fontSize: 11.5, color: '#666', lineHeight: 1.55, padding: '6px 0 4px' }}>
+                Your profile, preferences and allergies are stored against your account and are only readable by you. Your location is used to search for places and is never shared with other users.
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 0' }}>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: 13.5, color: '#ddd' }}>Share my area with the assistant</div>
+                  <div style={{ fontSize: 11.5, color: '#666', marginTop: 2 }}>Turn off and the assistant suggests without using your area</div>
+                </div>
+                <Toggle on={settings.aiUseLocation} onChange={v => setOpt({ aiUseLocation: v })} />
+              </div>
+            </div>
+          )}
+
+          {/* Location settings */}
+          <div className="setrow" onClick={() => setOpenPanel(openPanel === 'loc' ? null : 'loc')} style={{ borderBottom: '0.5px solid #1e1e1e' }}>
+            <i className="ti ti-map-pin" style={{ fontSize: 18, color: '#888', flexShrink: 0 }} />
+            <span style={{ flex: 1, fontSize: 14, fontWeight: 500, color: '#ccc' }}>Location settings</span>
+            <i className={openPanel === 'loc' ? 'ti ti-chevron-up' : 'ti ti-chevron-down'} style={{ fontSize: 16, color: '#555' }} />
+          </div>
+          {openPanel === 'loc' && (
+            <div className="setpanel">
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 0' }}>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: 13.5, color: '#ddd' }}>Use my live location</div>
+                  <div style={{ fontSize: 11.5, color: '#666', marginTop: 2 }}>
+                    {settings.useLiveLocation ? 'Results follow you as you move' : 'Fixed area: ' + (settings.areaLabel || profile?.postcode || 'not set')}
+                  </div>
+                </div>
+                <Toggle on={settings.useLiveLocation} onChange={v => { setOpt({ useLiveLocation: v }); if (!v) setShowArea(true) }} />
+              </div>
+              <div onClick={() => setShowArea(true)} style={{ fontSize: 13, color: '#FF6B35', fontWeight: 600, padding: '8px 0 2px', cursor: 'pointer' }}>
+                Change area
+              </div>
+            </div>
+          )}
+
+          {/* Help */}
+          <div className="setrow" onClick={() => { window.location.href = 'mailto:johnpezterjaosn@gmail.com?subject=Outly%20support' }}>
+            <i className="ti ti-help-circle" style={{ fontSize: 18, color: '#888', flexShrink: 0 }} />
+            <span style={{ flex: 1, fontSize: 14, fontWeight: 500, color: '#ccc' }}>Help and support</span>
+            <i className="ti ti-chevron-right" style={{ fontSize: 16, color: '#333' }} />
+          </div>
         </div>
+
+        {showArea && <LocationPicker onClose={() => setShowArea(false)} />}
 
         <div style={{ margin: '12px 20px 0' }}>
           <button onClick={() => signOut()} style={{ width: '100%', background: 'rgba(255,59,48,0.1)', border: '0.5px solid rgba(255,59,48,0.25)', borderRadius: 14, padding: 14, fontSize: 14, fontWeight: 600, color: '#ff3b30', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>

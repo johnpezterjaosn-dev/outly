@@ -5,7 +5,21 @@ const DAYS = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Satur
 const FREE = [7,14,21,28]
 const EVENTS = [3,10,17]
 
-export default function CalendarOverlay({ onClose }) {
+function gcalLink(h, when) {
+  const start = when ? new Date(when) : new Date(Date.now() + 86400000)
+  const end = new Date(start.getTime() + 2 * 60 * 60 * 1000)
+  const fmt = d => d.toISOString().replace(/[-:]|\.\d{3}/g, '')
+  const params = new URLSearchParams({
+    action: 'TEMPLATE',
+    text: h?.name || 'Outly hangout',
+    dates: fmt(start) + '/' + fmt(end),
+    details: 'Planned with Outly' + (h?.invited_names?.length ? ' with ' + h.invited_names.join(', ') : ''),
+    location: h?.place || '',
+  })
+  return 'https://calendar.google.com/calendar/render?' + params.toString()
+}
+
+export default function CalendarOverlay({ onClose, hangout }) {
   const [m, setM] = useState(5)
   const [y, setY] = useState(2026)
   const [sel, setSel] = useState(null)
@@ -30,14 +44,14 @@ export default function CalendarOverlay({ onClose }) {
       </div>
       <div className="ovscroll">
         {/* Google Calendar connect */}
-        <div onClick={() => alert('Connect Google Calendar — coming soon!')} style={{ background: '#1a1a1a', border: '0.5px solid #2a2a2a', borderRadius: 14, padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 12, marginTop: 16, cursor: 'pointer' }}>
+        <a href={gcalLink(hangout, hangout?.datetime || (sel ? new Date(y, m, sel, 18, 0) : null))} target="_blank" rel="noopener noreferrer" style={{ textDecoration: 'none', background: '#1a1a1a', border: '0.5px solid #2a2a2a', borderRadius: 14, padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 12, marginTop: 16, cursor: 'pointer' }}>
           <svg width="28" height="28" viewBox="0 0 24 24"><path d="M19.5 3h-3V1.5h-1.5V3h-7.5V1.5H6V3H2.5A1.5 1.5 0 001 4.5v15A1.5 1.5 0 002.5 21h17a1.5 1.5 0 001.5-1.5v-15A1.5 1.5 0 0019.5 3zm0 16.5h-17V9h17v10.5z" fill="#4285F4"/></svg>
           <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 14, fontWeight: 600, color: '#fff' }}>Connect Google Calendar</div>
-            <div style={{ fontSize: 12, color: '#666', marginTop: 2 }}>Let AI see your free days automatically</div>
+            <div style={{ fontSize: 14, fontWeight: 600, color: '#fff' }}>Add to Google Calendar</div>
+            <div style={{ fontSize: 12, color: '#666', marginTop: 2 }}>Opens a pre filled event you can save</div>
           </div>
           <i className="ti ti-chevron-right" style={{ fontSize: 16, color: '#555' }} />
-        </div>
+        </a>
 
         {/* Cal nav */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 0 12px' }}>
@@ -107,7 +121,7 @@ export default function CalendarOverlay({ onClose }) {
                   </div>
                 </div>
               ))}
-              <button className="btn btn-o" onClick={() => alert('Preview 🎉 — calendar saving ships in the next version.')}>Confirm & Add to Calendar 🎉</button>
+              <a className="btn btn-o" style={{ textDecoration: 'none', display: 'block', textAlign: 'center' }} href={gcalLink(hangout, sel ? new Date(y, m, sel, 18, 0) : hangout?.datetime)} target="_blank" rel="noopener noreferrer" onClick={onClose}>Add to Calendar 🎉</a>
             </div>
           </>
         )}

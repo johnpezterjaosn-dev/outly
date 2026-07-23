@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { useAuth } from '../context/AuthContext'
 import { searchNearby, hasPlacesKey } from '../lib/places'
+import { getSettings } from '../lib/settings'
 import CalendarOverlay from './CalendarOverlay'
 
 function OA({ s = 28 }) {
@@ -28,6 +29,7 @@ export default function AIChatView({ onBack }) {
     let liveFlag = true
     ;(async () => {
       if (!hasPlacesKey() || !profile?.lat || !profile?.lng) return
+      if (!getSettings(profile.id).aiUseLocation) return
       const [food, fun] = await Promise.all([
         searchNearby({ lat: profile.lat, lng: profile.lng, types: ['restaurant', 'cafe'], radius: 4000, max: 8 }),
         searchNearby({ lat: profile.lat, lng: profile.lng, types: ['park', 'movie_theater', 'bowling_alley', 'tourist_attraction'], radius: 9000, max: 6 }),
