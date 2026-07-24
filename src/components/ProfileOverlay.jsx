@@ -217,24 +217,6 @@ export default function ProfileOverlay({ onClose }) {
         <Row title="Settings" />
         <div style={{ margin: '0 20px', background: '#1a1a1a', border: '0.5px solid #2a2a2a', borderRadius: 14, overflow: 'hidden' }}>
 
-          {/* Notifications */}
-          <div className="setrow" onClick={() => setOpenPanel(openPanel === 'notif' ? null : 'notif')} style={{ borderBottom: '0.5px solid #1e1e1e' }}>
-            <i className="ti ti-bell" style={{ fontSize: 18, color: '#888', flexShrink: 0 }} />
-            <span style={{ flex: 1, fontSize: 14, fontWeight: 500, color: '#ccc' }}>Notifications</span>
-            <i className={openPanel === 'notif' ? 'ti ti-chevron-up' : 'ti ti-chevron-down'} style={{ fontSize: 16, color: '#555' }} />
-          </div>
-          {openPanel === 'notif' && (
-            <div className="setpanel">
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 0' }}>
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: 13.5, color: '#ddd' }}>Unread badges</div>
-                  <div style={{ fontSize: 11.5, color: '#666', marginTop: 2 }}>Show a count on chats with new messages</div>
-                </div>
-                <Toggle on={settings.showBadges} onChange={v => setOpt({ showBadges: v })} />
-              </div>
-            </div>
-          )}
-
           {/* Privacy */}
           <div className="setrow" onClick={() => setOpenPanel(openPanel === 'privacy' ? null : 'privacy')} style={{ borderBottom: '0.5px solid #1e1e1e' }}>
             <i className="ti ti-lock" style={{ fontSize: 18, color: '#888', flexShrink: 0 }} />

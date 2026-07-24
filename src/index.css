@@ -283,3 +283,14 @@ button, input { font-family: var(--font); }
 .toggle.on { background:#FF6B35; }
 .toggle .knob { position:absolute; top:3px; left:3px; width:18px; height:18px; border-radius:50%; background:#fff; transition:left .2s; }
 .toggle.on .knob { left:21px; }
+
+
+/* Ask Outly AI button in the group chat input bar */
+.iai {
+  width: 40px; height: 40px; border-radius: 50%;
+  background: #1a1a1a; border: 1px solid rgba(255,107,53,0.5);
+  color: #FF6B35; font-size: 17px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; margin-right: 8px;
+}
+.iai:disabled { opacity: 0.45; }

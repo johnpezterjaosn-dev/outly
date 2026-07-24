@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
-import { getSettings } from '../lib/settings'
 import AIChatView from '../components/AIChatView'
 import GroupChatView from '../components/GroupChatView'
 import CreateHangoutOverlay from '../components/CreateHangoutOverlay'
@@ -43,7 +42,6 @@ export default function DiscussPage() {
   const [showAdd, setShowAdd] = useState(false)
   const [hangouts, setHangouts] = useState([])
   const [loading, setLoading] = useState(true)
-  const settings = getSettings(user?.id)
 
   async function loadHangouts() {
     const { data } = await supabase

@@ -5,7 +5,6 @@ const DEFAULTS = {
   useLiveLocation: true,   // follow the phone's GPS each session
   areaLabel: '',           // manually chosen area, e.g. "Blacktown"
   aiUseLocation: true,     // let the assistant use the area for suggestions
-  showBadges: true,        // unread badges on the Discuss list
 }
 
 export function getSettings(uid) {

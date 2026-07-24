@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import { useAuth } from '../context/AuthContext'
+import { supabase } from '../lib/supabase'
 import { searchNearby, hasPlacesKey } from '../lib/places'
 import { getSettings } from '../lib/settings'
 import CalendarOverlay from './CalendarOverlay'
@@ -13,16 +14,45 @@ function OA({ s = 28 }) {
 }
 
 export default function AIChatView({ onBack }) {
-  const { profile } = useAuth()
+  const { user, profile } = useAuth()
   const name = profile?.first_name ?? 'there'
-  const [msgs, setMsgs] = useState([
-    { role: 'assistant', text: `Hey ${name}! 👋 I can help plan your next hangout. Want me to suggest some places for this weekend?` }
-  ])
+  const GREETING = { role: 'assistant', text: `Hey ${name}! 👋 I can help plan your next hangout. Want me to suggest some places for this weekend?` }
+  const [msgs, setMsgs] = useState([GREETING])
+  const [historyLoaded, setHistoryLoaded] = useState(false)
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
   const [showCal, setShowCal] = useState(false)
   const [nearbyCtx, setNearbyCtx] = useState('')
   const bottomRef = useRef(null)
+
+  // Load this user's saved conversation so the thread continues where they left off
+  useEffect(() => {
+    let alive = true
+    ;(async () => {
+      if (!user) return
+      const { data } = await supabase
+        .from('ai_messages')
+        .select('role, content')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: true })
+      if (!alive) return
+      if (data?.length) setMsgs([GREETING, ...data.map(m => ({ role: m.role, text: m.content }))])
+      setHistoryLoaded(true)
+    })()
+    return () => { alive = false }
+  }, [user?.id])
+
+  // Save one turn of the conversation
+  async function persist(role, content) {
+    if (!user) return
+    try { await supabase.from('ai_messages').insert({ user_id: user.id, role, content }) } catch {}
+  }
+
+  async function clearHistory() {
+    if (!user) return
+    await supabase.from('ai_messages').delete().eq('user_id', user.id)
+    setMsgs([GREETING])
+  }
 
   // Give the AI real, current venue data so its suggestions are specific, not generic
   useEffect(() => {
@@ -53,6 +83,7 @@ export default function AIChatView({ onBack }) {
     const newMsgs = [...msgs, { role: 'user', text }]
     setMsgs(newMsgs)
     setLoading(true)
+    persist('user', text)
 
     const key = import.meta.env.VITE_ANTHROPIC_KEY
     if (!key || key === 'placeholder') {
@@ -92,6 +123,7 @@ ${nearbyCtx ? `REAL VENUES NEAR THE USER RIGHT NOW (live from Google, with dista
       const reply = data.content?.[0]?.text
         ?? (data.error?.message ? `⚠️ ${data.error.message}` : 'Something went wrong — your message is back in the box, tap send to retry.')
       if (!data.content?.[0]?.text) setInput(text)
+      else persist('assistant', reply)
       setMsgs(m => [...m, { role: 'assistant', text: reply }])
     } catch {
       setInput(text)
@@ -110,6 +142,7 @@ ${nearbyCtx ? `REAL VENUES NEAR THE USER RIGHT NOW (live from Google, with dista
           <div style={{ fontSize: 16, fontWeight: 700, color: '#fff' }}>Outly AI</div>
           <div style={{ fontSize: 12, color: '#666' }}>Your hangout planner</div>
         </div>
+        <button className="ovback" title="Clear conversation" onClick={() => { if (confirm('Clear this conversation? Saved messages will be deleted.')) clearHistory() }}><i className="ti ti-trash" style={{ fontSize: 17, color: '#666' }} /></button>
         <button className="ovback" onClick={() => setShowCal(true)}><i className="ti ti-calendar" style={{ fontSize: 18, color: '#FF6B35' }} /></button>
       </div>
 
